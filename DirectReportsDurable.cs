@@ -1,34 +1,31 @@
+using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
+using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
 using Azure.Identity;
-using System.Collections.Generic;
-using GraphUser = Microsoft.Graph.User;
+using GUser = Microsoft.Graph.User;
 
 namespace DirectReports
 {
-    public static class DirectReports
+    internal class DirectReportsDurable
     {
-        [FunctionName("DirectReports")]
-        public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)] HttpRequest req,
-            ILogger log)
+        [FunctionName("DirectReportsDurable")]
+        public static async Task<List<User>> RunOrchestrator(
+            [OrchestrationTrigger] IDurableOrchestrationContext context)
         {
-            string userPrincipalName = req.Query["alias"];
-            if (string.IsNullOrEmpty(userPrincipalName)){
-                return new BadRequestObjectResult("please specify an alias");
-            }
+            var outputs = new List<User>();
+            var rootUser = context.GetInput<string>();
+            outputs.AddRange(await context.CallActivityAsync<IList<User>>("DirectReports_GetDirects", rootUser));
+            return outputs;
+        }        
 
-            var results = await GetDirects(userPrincipalName, log);       
-
-            return new OkObjectResult(results);
-        }
-
-        public static async Task<IList<User>> GetDirects(string userPrincipalName, ILogger log)
+        [FunctionName("DirectReports_GetDirects")]
+        public static async Task<IList<User>> GetDirects([ActivityTrigger] string userPrincipalName, ILogger log)
         {
             log.LogInformation($"Getting direct reports for {userPrincipalName}");
 
@@ -46,7 +43,7 @@ namespace DirectReports
                 .Select("id, displayName, userPrincipalName")
                 .Expand("manager")
                 .GetAsync();
-            var manager = (GraphUser)user.Manager;
+            var manager = (GUser)user.Manager;
             //var blobClient = new BlobClient(new Uri("https://myaccount.blob.core.windows.net/mycontainer/myblob"), credential);            
 
             results.Add(new User
@@ -65,11 +62,25 @@ namespace DirectReports
 
             foreach(var report in directReports)
             {
-                var direct = (GraphUser)report;
+                var direct = (GUser)report;
                 results.AddRange(await GetDirects(direct.UserPrincipalName, log));
             }
 
             return results;
+        }
+
+        [FunctionName("DirectReports_HttpStart")]
+        public static async Task<HttpResponseMessage> HttpStart(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")] HttpRequestMessage req,
+            [DurableClient] IDurableOrchestrationClient starter,
+            ILogger log)
+        {
+            // Function input comes from the request content.
+            string instanceId = await starter.StartNewAsync("DirectReportsDurable", null, "pjirsa@36mphdev.onmicrosoft.com");
+
+            log.LogInformation($"Started orchestration with ID = '{instanceId}'.");
+
+            return starter.CreateCheckStatusResponse(req, instanceId);
         }
     }
 }
