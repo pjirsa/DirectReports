@@ -5,42 +5,42 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
-using Azure.Identity;
 using System.Collections.Generic;
 using GraphUser = Microsoft.Graph.User;
 
 namespace DirectReports
 {
-    public static class DirectReports
+    public class DirectReports
     {
+        private GraphServiceClient _graphClient;
+        private ILogger<DirectReports> _logger;
+
+        public DirectReports(GraphServiceClient graphClient, ILogger<DirectReports> logger)
+        {
+            _graphClient = graphClient;
+            _logger = logger;
+        }
+
         [FunctionName("DirectReports")]
-        public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)] HttpRequest req,
-            ILogger log)
+        public async Task<IActionResult> Run(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)] HttpRequest req)
         {
             string userPrincipalName = req.Query["alias"];
             if (string.IsNullOrEmpty(userPrincipalName)){
                 return new BadRequestObjectResult("please specify an alias");
             }
 
-            var results = await GetDirects(userPrincipalName, log);       
+            var results = await GetDirects(userPrincipalName);       
 
             return new OkObjectResult(results);
         }
 
-        public static async Task<IList<User>> GetDirects(string userPrincipalName, ILogger log)
+        private async Task<IList<User>> GetDirects(string userPrincipalName)
         {
-            log.LogInformation($"Getting direct reports for {userPrincipalName}");
+            _logger.LogInformation($"Getting direct reports for {userPrincipalName}");
 
-            var results = new List<User>();
-
-            var credential = new ClientSecretCredential(System.Environment.GetEnvironmentVariable("TenantId"), 
-                System.Environment.GetEnvironmentVariable("ClientId"), 
-                System.Environment.GetEnvironmentVariable("ClientSecret")
-            ); //new DefaultAzureCredential();
-
-            var graphClient = new GraphServiceClient(credential);
-            var user = await graphClient.Users[userPrincipalName]
+            var results = new List<User>();            
+            var user = await _graphClient.Users[userPrincipalName]
                 //.DirectReports
                 .Request()
                 .Select("id, displayName, userPrincipalName")
@@ -56,17 +56,17 @@ namespace DirectReports
                 DirectManager = manager?.UserPrincipalName ?? ""
             });
 
-            var directReports = await graphClient.Users[userPrincipalName]
+            var directReports = await _graphClient.Users[userPrincipalName]
                 .DirectReports
                 .Request()
                 .GetAsync();
 
-            log.LogInformation($"{userPrincipalName} has {directReports.Count} direct reports.");
+            _logger.LogInformation($"{userPrincipalName} has {directReports.Count} direct reports.");
 
             foreach(var report in directReports)
             {
                 var direct = (GraphUser)report;
-                results.AddRange(await GetDirects(direct.UserPrincipalName, log));
+                results.AddRange(await GetDirects(direct.UserPrincipalName));
             }
 
             return results;
