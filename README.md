@@ -4,20 +4,17 @@ Recursively build a list of all direct reports using Microsoft Graph API
 ## Getting started
 1. Clone the repo
 1. Create 'local.settings.json' file
-1. Add storage account connection string to local.settings.json file
-1. Add AAD app registration values
+1. Set storage account connection string in local.settings.json file
+1. Add AAD app registration values to `Manage user secrets...`
 ```
 {
-  "IsEncrypted": false,
-  "Values": {
-    "AzureWebJobsStorage": "storageconnectionstring",
-    "FUNCTIONS_WORKER_RUNTIME": "dotnet",
-    "ClientId": "App Id",
-    "ClientSecret": "Client Secret",
-    "TenantId": "AAD Tenant Id"
-  },
-  "ConnectionStrings": {}
-}
+    "AzureAd": {
+      "Instance": "https://login.microsoftonline.com/",
+      "TenantId": "AAD Tenant Id",
+      "ClientId": "App Id",
+      "ClientSecret": "Client Secret value"
+    }
+  }
 ```
 1. Run `func start`
-1. `curl https://localhost:7071/api/DirectReports?alias=jsmith@acme.com`
+1. `curl -H "Authorization: Bearer your_token" https://localhost:7071/api/DirectReports?alias=jsmith@acme.com`

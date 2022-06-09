@@ -1,15 +1,14 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <AzureFunctionsVersion>v4</AzureFunctionsVersion>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <AzureFunctionsVersion>v3</AzureFunctionsVersion>
+    <UserSecretsId>c36c768f-7b0a-4914-b20f-4f3717755abf</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.Functions.Extensions" Version="1.1.0" />
-    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.DurableTask" Version="2.6.1" />
-    <PackageReference Include="Microsoft.Graph" Version="4.30.0" />
-    <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.0.1" />
-    <PackageReference Include="Microsoft.Identity.Web" Version="1.*" />
-    <PackageReference Include="Microsoft.Identity.Web.MicrosoftGraph" Version="1.*" />
+    <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.11" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="1.12.0" />
+    <PackageReference Include="Microsoft.Identity.Web.MicrosoftGraph" Version="1.12.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="host.json">
@@ -22,6 +21,6 @@
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>Never</CopyToPublishDirectory>
-    </None>
+    </None>    
   </ItemGroup>
 </Project>

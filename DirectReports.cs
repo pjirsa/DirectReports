@@ -4,6 +4,8 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Identity.Web;
+using Microsoft.Identity.Web.Resource;
 using Microsoft.Graph;
 using System.Collections.Generic;
 using GraphUser = Microsoft.Graph.User;
@@ -12,8 +14,9 @@ namespace DirectReports
 {
     public class DirectReports
     {
-        private GraphServiceClient _graphClient;
-        private ILogger<DirectReports> _logger;
+        private readonly GraphServiceClient _graphClient;
+        private readonly ILogger<DirectReports> _logger;
+        static readonly string[] scopeRequiredByApi = new string[] { "access_as_user" };
 
         public DirectReports(GraphServiceClient graphClient, ILogger<DirectReports> logger)
         {
@@ -25,12 +28,19 @@ namespace DirectReports
         public async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)] HttpRequest req)
         {
+            var (authenticationStatus, authenticationResponse) = 
+                await req.HttpContext.AuthenticateAzureFunctionAsync();
+            if (!authenticationStatus) return authenticationResponse;
+
+            req.HttpContext.VerifyUserHasAnyAcceptedScope(scopeRequiredByApi);
+
             string userPrincipalName = req.Query["alias"];
             if (string.IsNullOrEmpty(userPrincipalName)){
                 return new BadRequestObjectResult("please specify an alias");
             }
 
             var results = await GetDirects(userPrincipalName);       
+            //var blobClient = new BlobClient(new Uri("https://myaccount.blob.core.windows.net/mycontainer/myblob"), credential);            
 
             return new OkObjectResult(results);
         }
@@ -47,7 +57,6 @@ namespace DirectReports
                 .Expand("manager")
                 .GetAsync();
             var manager = (GraphUser)user.Manager;
-            //var blobClient = new BlobClient(new Uri("https://myaccount.blob.core.windows.net/mycontainer/myblob"), credential);            
 
             results.Add(new User
             {

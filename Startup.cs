@@ -1,15 +1,14 @@
+using System.Reflection;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Microsoft.Graph;
-using Azure.Identity;
 using Microsoft.Identity.Web;
 
-[assembly: FunctionsStartup(typeof(AuthFuncDemo.Startup))]
+[assembly: FunctionsStartup(typeof(DirectReports.Startup))]
 
-namespace AuthFuncDemo
+namespace DirectReports
 {
     public class Startup : FunctionsStartup
     {
@@ -35,6 +34,7 @@ namespace AuthFuncDemo
                 .SetBasePath(currentDirectory)
                 .AddConfiguration(configuration) // Add the original function configuration 
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .AddUserSecrets(Assembly.GetExecutingAssembly(), optional: true)
                 .Build();
 
             // Replace the Azure Function configuration with our new one
@@ -45,14 +45,6 @@ namespace AuthFuncDemo
 
         private void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton<GraphServiceClient>(o => {
-                var credential = new ClientSecretCredential(
-                    System.Environment.GetEnvironmentVariable("AzureAd:TenantId"),
-                    System.Environment.GetEnvironmentVariable("AzureAd:ClientId"),
-                    System.Environment.GetEnvironmentVariable("AzureAd:ClientSecret"));
-                return new GraphServiceClient(credential);
-            });
-
             services.AddAuthentication(sharedOptions =>
             {
                 sharedOptions.DefaultScheme = Microsoft.Identity.Web.Constants.Bearer;
