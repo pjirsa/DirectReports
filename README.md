@@ -12,6 +12,7 @@ Recursively build a list of all direct reports using Microsoft Graph API
   "Values": {
     "AzureWebJobsStorage": "storageconnectionstring",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+    "TopLevelAlias": "jsmith@acme.com",
     "ClientId": "App Id",
     "ClientSecret": "Client Secret",
     "TenantId": "AAD Tenant Id"
