@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
 using Azure.Identity;
+using Microsoft.Identity.Web;
 
 [assembly: FunctionsStartup(typeof(AuthFuncDemo.Startup))]
 
@@ -46,11 +47,21 @@ namespace AuthFuncDemo
         {
             services.AddSingleton<GraphServiceClient>(o => {
                 var credential = new ClientSecretCredential(
-                    System.Environment.GetEnvironmentVariable("TenantId"),
-                    System.Environment.GetEnvironmentVariable("ClientId"),
-                    System.Environment.GetEnvironmentVariable("ClientSecret"));
+                    System.Environment.GetEnvironmentVariable("AzureAd:TenantId"),
+                    System.Environment.GetEnvironmentVariable("AzureAd:ClientId"),
+                    System.Environment.GetEnvironmentVariable("AzureAd:ClientSecret"));
                 return new GraphServiceClient(credential);
             });
+
+            services.AddAuthentication(sharedOptions =>
+            {
+                sharedOptions.DefaultScheme = Microsoft.Identity.Web.Constants.Bearer;
+                sharedOptions.DefaultChallengeScheme = Microsoft.Identity.Web.Constants.Bearer;
+            })
+                .AddMicrosoftIdentityWebApi(Configuration.GetSection("AzureAd"))
+                    .EnableTokenAcquisitionToCallDownstreamApi()
+                    .AddMicrosoftGraph(Configuration.GetSection("DownstreamApi"))
+                        .AddInMemoryTokenCaches();
         }
     }
 }
