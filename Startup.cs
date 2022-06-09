@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
 using Azure.Identity;
+using Azure.Storage.Blobs;
 
 [assembly: FunctionsStartup(typeof(AuthFuncDemo.Startup))]
 
@@ -50,6 +51,11 @@ namespace AuthFuncDemo
                     System.Environment.GetEnvironmentVariable("ClientId"),
                     System.Environment.GetEnvironmentVariable("ClientSecret"));
                 return new GraphServiceClient(credential);
+            });
+
+            services.AddSingleton<BlobServiceClient>(o => {
+                string blobConnectionString = System.Environment.GetEnvironmentVariable("AzureWebJobsStorage");
+                return new BlobServiceClient(blobConnectionString);
             });
         }
     }

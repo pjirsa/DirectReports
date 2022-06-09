@@ -7,18 +7,39 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
 using System.Collections.Generic;
 using GraphUser = Microsoft.Graph.User;
+using Azure.Storage.Blobs;
+using Newtonsoft.Json;
+using System.IO;
+using System.Text;
 
 namespace DirectReports
 {
     public class DirectReports
     {
-        private GraphServiceClient _graphClient;
-        private ILogger<DirectReports> _logger;
+        private readonly GraphServiceClient _graphClient;
+        private readonly BlobServiceClient _blobClient;
+        private readonly ILogger<DirectReports> _logger;
 
-        public DirectReports(GraphServiceClient graphClient, ILogger<DirectReports> logger)
+        public DirectReports(GraphServiceClient graphClient, BlobServiceClient blobClient, ILogger<DirectReports> logger)
         {
             _graphClient = graphClient;
+            _blobClient = blobClient;
             _logger = logger;
+        }
+
+        [FunctionName("DirectReportsTimerTrigger")]
+        public async Task DirectReportsTimerTrigger(
+            [TimerTrigger("0 30 1 * * *", RunOnStartup = true)]TimerInfo timer)
+        {
+            _logger.LogInformation("Executing time trigger for DirectReports");
+            string topLevelAlias = System.Environment.GetEnvironmentVariable("TopLevelAlias");
+
+            var results = await GetDirects(topLevelAlias);
+
+            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(results)));
+            await _blobClient
+                .GetBlobContainerClient("directreports")
+                .UploadBlobAsync($"directreports-{System.DateTime.Now.ToString("yyyyMMdd")}.json", stream);
         }
 
         [FunctionName("DirectReports")]
